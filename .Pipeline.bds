@@ -1,0 +1,194 @@
+#!/usr/bin/env bds
+
+#-------------------------------------------------------------------
+#set up default values for all incomig flags
+#are automatically overwritten by supplied values
+#-------------------------------------------------------------------
+
+string e = "Not_A_Dir"   #experimental directory variable 
+int n    =  1            #default number of cores per task
+bool f   =  false        #did the user supply flags?
+
+
+#-------------------------------------------------------------------
+#save all your usefull paths to prevent grief later
+#-------------------------------------------------------------------
+
+#Top Level
+experiment     := e
+pipe_modules   := ppwd + '.Pipe_Modules/'
+default_config := ppwd + '.Defaults.config
+
+#Input Folders
+user_config   := experiment + "User.config"     #User flag location
+inputs    := experiment + 'Raw_Inputs'
+
+#Output folders, we'll make these on the fly later
+intermediates := experiment + 'Intermediates/'
+outputs       := experiment + 'Outputs/'
+
+
+#-------------------------------------------------------------------
+#read the configs
+#i handle all the settings as strings, one string per pipe module
+#each one should be in the form of "-f arg1 -g arg2"
+#-------------------------------------------------------------------
+
+#read defaults
+string{} flag_maps = config( default_flags )
+
+#read user flags
+if ( f == true ) { flag_faps = config( user_flags, flag_maps )}
+
+#parse the map to get the flags
+string Foo_flags   = flag_maps{ 'Flipping_foo' }
+string Bar_flags   = flag_maps{ 'Flipping_bar' }
+string Merge_flags = flag_maps{ 'Merging_foobars' }
+
+#-------------------------------------------------------------------
+#Get a list of all the input samples and parallelize string flipping across them
+#-------------------------------------------------------------------
+
+string[] input_samples := inputs.dir() #list of sample names (not paths)
+par{
+    for( string sample : input_samples ){
+    
+        #---------------------------------------------------------------
+        #Handle the paths for this sample
+        #---------------------------------------------------------------
+        
+        #build the path
+        sample_path := inputs + sample
+        
+        #get the paths to the data files based on a glob
+        foo_file = sample_path.dirPath('*.foo')
+        bar_file = sample_path.dirPath('*.bar')
+        
+        #set up the intermediate dirs for the files
+        inter_dest := intermediates + sample
+        inter_foo  := intermediate_dest + sample + '.foo'
+        inter_bar  := intermediate_dest + sample + '.bar'
+        
+        #make the dir
+        if ( !inter_dest.isDir() ) { inter_dest.mkdir() }
+        
+        #---------------------------------------------------------------
+        #Run the tasks
+        #---------------------------------------------------------------
+
+        #info for the task
+        task_foo = 'Flipping Foo: ' + sample
+        task_bar = 'Flipping Bar: ' + sample
+        
+        
+        #Task for flipping foos 
+        string Foo_tid = task( taskName := task_foo, intermediate_foo <- foo_file, cpus := n){
+        
+            #Run the module        
+            sys python3 $Pipe_Modules/foo_flip.py -i $foo_file -o $inter_foo
+        }
+        
+        #Task for flipping bars
+        string Bar_tid = task( taskName := task_foo, intermediate_foo <- foo_file, cpus := n){
+        
+            #Run the module
+            sys Rscript $Pipe_Modules/bar_flip.R -i $bar_file -o $inter_bar
+        }
+    }
+}
+
+#Let all tasks finish
+wait
+
+#-------------------------------------------------------------------
+#list of all the intermediately processed samples and parallelize
+#-------------------------------------------------------------------
+
+string[] inter_samples intermediates.dir()
+par{
+    for( string sample : inter_samples ){
+        
+        #---------------------------------------------------------------
+        #Handle the paths for this sample
+        #---------------------------------------------------------------
+        
+        #build the path
+        sample_path := intermediates + sample
+        
+        #get the paths to the data files based on a glob
+        foo_file = sample_path.dirPath('*.foo')
+        bar_file = sample_path.dirPath('*.bar')
+        
+        #set up the output dirs for the files
+        out_dest   := outputs + sample 
+        out_foobar := out_dest + sample + '.foobar'
+        
+        #make the dir
+        if ( !out_dest.isDir() ) { out_dest.mkdir() }
+        
+        #---------------------------------------------------------------
+        #Run the task
+        #---------------------------------------------------------------
+        
+        #info for the task
+        task_foobar = 'Assmebling Foobar: ' + sample
+        
+        #Task for assembling foobars
+        string Foobar_tid = task( taskName := task_foobar, out_foobar <- [foo_file,bar_file], cpus := n){
+        
+            #Run the module
+            sys ./$Pipe_Modules/foobar_merge.sh -f $foo_file -b $bar_file -o $out_foobar       
+        }
+    }
+}
+
+#Let finish
+wait
+
+
+#-------------------------------------------------------------------
+#list of all the files which need aggregation
+#-------------------------------------------------------------------
+
+string[] out_files = outputs.dirPath('/**/*.foobar')
+
+#---------------------------------------------------------------
+#Run the task
+#---------------------------------------------------------------
+
+#set up the output dirs for the files
+agg_csv := experiment + 'Final.csv
+
+#info for the task
+string task_aggregate = 'Aggregating Foobars'
+
+#the task
+string Aggregate_tid = task(taskName = task_aggregate, agg_csv <- out_files, cpus :=n){
+    
+    #Delete and remake the output file if it preexists (otherwise will duplicate data)
+    agg_csv.rm()
+    sys touch $agg_csv
+    
+    #Iterate on outputs
+    string[] out_samples = outputs.dir()
+    for( string sample : out_samples ){
+    
+        #build the path
+        sample_path := outputs + sample
+        
+        #get the paths to the data files based on a glob
+        foobar_file = sample_path.dirPath('/*.foobar') 
+        
+        #read in the string, use the sample name as rowname.
+        sample_string := sample + ',' +sample_path.read() +'\n'
+        
+        #write it out
+        sample_string.write(agg_csv)
+    }
+} 
+
+
+
+
+
+
