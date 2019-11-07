@@ -13,7 +13,7 @@ PATH=$(getconf PATH)
 java_dir="$(which java)"
 java_dir=${java_dir%java}
 export PATH="$java_dir":$PATH
-export PATH=$PWD/.bin/bds:$PATH
+export PATH=$PWD/.bin/.bds:$PATH
 export PATH=$PWD/.bin/R/bin:$PATH
 export PATH=$PWD/.bin/Python/bin:$PATH
 export PYTHONPATH=$PWD/.bin/Python/bin:$PYTHONPATH
@@ -27,14 +27,14 @@ export PYTHONPATH=$PWD/.bin/Python/bin:$PYTHONPATH
 #-------------------------------------------------------------------------
 
 Provided_Dir=false
-Provided_Flags=false
+Provided_Flags=0
 nThreads=1
 
 while getopts ':e:n:f' flag; do
   case "${flag}" in
     e) Provided_Dir=true; Experiment="${OPTARG}";;  #mandatory flag
     n) nThreads="${OPTARG}" ;;
-    f) Provided_Flags=true;;
+    f) Provided_Flags=1;;
   esac
 done
 
@@ -52,5 +52,4 @@ fi
 #--------------------------------------------------------------------------
 #Execute the pipeline on the specified directory
 #--------------------------------------------------------------------------
-
-bds -c $PWD/.bin/bds/bds.config ./.Pipeline.bds -e ${Experiment}  -n ${nThreads} -f ${Provided_Flags}
+bds -c $PWD/.bin/.bds/bds.config ./.Pipeline.bds -e ${Experiment}  -n ${nThreads} -f ${Provided_Flags}
