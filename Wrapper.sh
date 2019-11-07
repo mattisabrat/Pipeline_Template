@@ -13,7 +13,7 @@ PATH=$(getconf PATH)
 java_dir="$(which java)"
 java_dir=${java_dir%java}
 export PATH="$java_dir":$PATH
-export PATH=$PWD/.bin/.bds:$PATH
+export PATH=$PWD/.bin/bds:$PATH
 export PATH=$PWD/.bin/R/bin:$PATH
 export PATH=$PWD/.bin/Python/bin:$PATH
 export PYTHONPATH=$PWD/.bin/Python/bin:$PYTHONPATH
@@ -52,4 +52,4 @@ fi
 #--------------------------------------------------------------------------
 #Execute the pipeline on the specified directory
 #--------------------------------------------------------------------------
-bds -c $PWD/.bin/.bds/bds.config ./.Pipeline.bds -e ${Experiment}  -n ${nThreads} -f ${Provided_Flags}
+bds -c $PWD/.bin/bds/bds.config ./.Pipeline.bds -e ${Experiment}  -n ${nThreads} -f ${Provided_Flags}

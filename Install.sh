@@ -34,13 +34,13 @@ cd $BasePath
 rm Python-3.7.3.tgz
 rm -rf Python-3.7.3/
 
-#Anything else you need
+#Anything else you need, you get the idea
 
 ##---------------------------------------------------------------------
 # Execute the package installing scripts in R and Python
 ##---------------------------------------------------------------------
 
-#Set up necessary path variables
+#Set up necessary path variables for the package installer scripts
 PATH=$(getconf PATH)
 export PATH=$PWD/.bin/R/bin:$PATH
 export PATH=$PWD/.bin/Python/bin:$PATH
