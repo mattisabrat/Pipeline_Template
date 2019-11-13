@@ -15,17 +15,14 @@ in_foo = open(input_foo,"r+")
 foo = in_foo.readline().rstrip()
 in_foo.close()
 
-print(foo)
 
 #flip the string
 foo = foo[::-1]
 
-print(foo)
 
 #Append the text from config_text
 foo = config_text + ' ' + foo
 
-print(foo)
 
 #write it out
 out_foo = open(output_foo, 'w+')
